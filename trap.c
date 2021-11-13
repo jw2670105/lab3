@@ -47,6 +47,13 @@ trap(struct trapframe *tf)
   }
 
   switch(tf->trapno){
+  case T_PGFLT:
+ 	  if(allocuvm(myproc()->pgdir, NEWPG - (myproc()->stkpages * PGSIZE) - PGSIZE, NEWPG - (myproc()->stkpages * PGSIZE)) == 0){
+		break;
+  	}
+  	myproc()->stkpages++;
+  	switchuvm(myproc());
+  	break;
   case T_IRQ0 + IRQ_TIMER:
     if(cpuid() == 0){
       acquire(&tickslock);
