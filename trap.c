@@ -47,13 +47,17 @@ trap(struct trapframe *tf)
   }
 
   switch(tf->trapno){
-  case T_PGFLT:
- 	  if(allocuvm(myproc()->pgdir, NEWPG - (myproc()->stkpages * PGSIZE) - PGSIZE, NEWPG - (myproc()->stkpages * PGSIZE)) == 0){
-		break;
-  	}
-  	myproc()->stkpages++;
-  	switchuvm(myproc());
-  	break;
+  case T_PGFLT:;
+    uint addr = rcr2();
+    pde_t *pgdir = myproc()->pgdir;
+
+    if(addr > KERNBASE - 4096) //check if the address of the pgflt was in kernbase for some odd reason..
+      cprintf("Tried to access KERNBASE zone (address > KERNBASE)\n");
+    if((allocuvm(pgdir, addr - PGSIZE, addr)) == 0) //else we need to grow the stack; add a stack page.
+      cprintf("allocuvm fail.\n"); //if allocuvm fails / no more available stack pages.
+    myproc()->stkpages++; //allocuvm successful, increment proc->stkpages by 1
+    cprintf("allocuvm pass. process has %d total pages now.\n", myproc()->stkpages);
+    break;
   case T_IRQ0 + IRQ_TIMER:
     if(cpuid() == 0){
       acquire(&tickslock);
